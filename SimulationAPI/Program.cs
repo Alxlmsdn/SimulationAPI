@@ -1,5 +1,4 @@
-using SimulationAPI.Services;
-using SimulationAPI.Simulate;
+using SimulationAPI.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddSingleton<ISimulationService<Guid, int>, SimulationService>();
+builder.Services.AddSingleton<ISimulationRepository<Guid, int>, SimulationRepository>();
 
 var app = builder.Build();
 
@@ -21,11 +20,11 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 
-app.MapPost("/", (HttpContext context, ISimulationService<Guid, int> simulationService) =>
+app.MapPost("/", (HttpContext context, ISimulationRepository<Guid, int> simulationRepository) =>
 {
 
     Guid simulationId = Guid.NewGuid();
-    simulationService.CreateAndRunSimulation(simulationId);
+    simulationRepository.CreateAndRun(simulationId);
     return simulationId.ToString();
     //1. Accept request
     //2. Add message to message broker, requesting start of simulation
@@ -34,22 +33,22 @@ app.MapPost("/", (HttpContext context, ISimulationService<Guid, int> simulationS
 .WithName("CreateSimulation")
 .WithOpenApi();
 
-app.MapGet("/getProgress/{id:guid}", (Guid id, ISimulationService<Guid, int> simulationService) =>
+app.MapGet("/getProgress/{id:guid}", (Guid id, ISimulationRepository<Guid, int> simulationRepository) =>
 {
     //1. Accept request, parse simulation ID
     //2. call method to fetch simulation progress %
     //3. return response with simulation progress.
-    return simulationService.CheckSimulationProgress(id);
+    return simulationRepository.CheckProgress(id);
 })
 .WithName("GetSimulationProgress")
 .WithOpenApi();
 
-app.MapGet("/getResults/{id:guid}", async (Guid id, ISimulationService<Guid, int> simulationService) =>
+app.MapGet("/getResults/{id:guid}", async (Guid id, ISimulationRepository<Guid, int> simulationRepository) =>
 {
     //1. accept request and parse simulation ID
     //2. call method to fetch results if available for simulation.
     //3. return response with results
-    return await simulationService.GetResults(id);
+    return await simulationRepository.GetResults(id);
 })
 .WithName("GetSimulationResults")
 .WithOpenApi();
