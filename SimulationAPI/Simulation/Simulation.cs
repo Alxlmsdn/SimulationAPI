@@ -13,7 +13,7 @@ public class Simulation : ISimulation
   {
     var now = DateTime.Now;
     double elapsedSeconds = Math.Max((now - _startTime).TotalSeconds, 1);
-    Console.WriteLine($"elapsedSeconds: {elapsedSeconds}");
+    Console.WriteLine($"{Id} - elapsedSeconds: {elapsedSeconds}");
     return (int)Math.Clamp(elapsedSeconds / _simulationDurationSeconds * 100, 0, 100);
   }
   public int Start(IProgress<(Guid, int)>? progress)
@@ -21,7 +21,7 @@ public class Simulation : ISimulation
     if (_startTime != default) return default;
 
     _startTime = DateTime.Now;
-    Console.WriteLine($"sim time: {_simulationDurationSeconds}");
+    Console.WriteLine($"{Id} -  sim time: {_simulationDurationSeconds}");
     for (int i = 0; i < _simulationDurationSeconds; i++)
     {
       Thread.Sleep(1000);

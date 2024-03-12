@@ -4,7 +4,7 @@ using SimulationAPI.Simulate;
 
 namespace SimulationAPI.Repository;
 
-public class SimulationRepository : ISimulationRepository<Guid, int>
+public class SimulationRepository(SimulationFactory simulationFactory) : ISimulationRepository<Guid, int>
 {
   ConcurrentDictionary<Guid, Task<int>> simulationTasks = new ConcurrentDictionary<Guid, Task<int>>();
   ConcurrentDictionary<Guid, int> simulationTaskProgress = new ConcurrentDictionary<Guid, int>();
@@ -37,7 +37,7 @@ public class SimulationRepository : ISimulationRepository<Guid, int>
     {
       throw new ArgumentException();
     }
-    ISimulation sim = new Simulation { Id = id };
+    ISimulation sim = simulationFactory.CreateSimulation(id);
     Progress<(Guid, int)> recordProgress = new Progress<(Guid, int)>(UpdateTaskProgress);
 
     Task<int> simulationTask = Task.Run(() => sim.Start(recordProgress));
