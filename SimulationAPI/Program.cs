@@ -1,4 +1,6 @@
+using SimulationAPI.Message;
 using SimulationAPI.Repository;
+using SimulationAPI.Service;
 using SimulationAPI.Simulate;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +11,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<SimulationFactory, ConcreteSimulationFactory>();
 builder.Services.AddSingleton<ISimulationRepository<Guid, int>, SimulationRepository>();
+builder.Services.AddSingleton<IMessageBroker<Guid>, MessageBroker<Guid>>();
+builder.Services.AddSingleton<ISimulationService, SimulationService>();
 
 var app = builder.Build();
 
@@ -22,37 +26,66 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 
-app.MapPost("/", (HttpContext context, ISimulationRepository<Guid, int> simulationRepository) =>
-{
-
-    Guid simulationId = Guid.NewGuid();
-    simulationRepository.CreateAndRun(simulationId);
-    return simulationId.ToString();
-    //1. Accept request
-    //2. Add message to message broker, requesting start of simulation
-    //3. return 200 response with ID of simulation.
-})
+app.MapPost("/", CreateSimulation)
 .WithName("CreateSimulation")
 .WithOpenApi();
 
-app.MapGet("/getProgress/{id:guid}", (Guid id, ISimulationRepository<Guid, int> simulationRepository) =>
-{
-    //1. Accept request, parse simulation ID
-    //2. call method to fetch simulation progress %
-    //3. return response with simulation progress.
-    return simulationRepository.CheckProgress(id);
-})
+app.MapGet("/progress/{id:guid}", GetSimulationProgress)
 .WithName("GetSimulationProgress")
 .WithOpenApi();
 
-app.MapGet("/getResults/{id:guid}", async (Guid id, ISimulationRepository<Guid, int> simulationRepository) =>
-{
-    //1. accept request and parse simulation ID
-    //2. call method to fetch results if available for simulation.
-    //3. return response with results
-    return await simulationRepository.GetResults(id);
-})
+app.MapGet("/results/{id:guid}", GetSimulationResults)
 .WithName("GetSimulationResults")
 .WithOpenApi();
+
+static IResult CreateSimulation(HttpContext context, ISimulationService simulationService)
+{
+    Guid simulationId = Guid.NewGuid();
+    var enqueued = simulationService.QueueSimulation(simulationId);
+    if (!enqueued)
+    {
+        Console.WriteLine("Simulation Not Queued");
+        return TypedResults.Problem();
+    }
+    return TypedResults.Ok(simulationId.ToString());
+}
+
+static IResult GetSimulationProgress(Guid id, ISimulationRepository<Guid, int> simulationRepository)
+{
+    try
+    {
+        int simulationPercentComplete = simulationRepository.CheckProgress(id);
+        return TypedResults.Ok(simulationPercentComplete);
+    }
+    catch (ArgumentNullException ane)
+    {
+        return TypedResults.BadRequest("Invalid id");
+    }
+    catch (KeyNotFoundException knfe)
+    {
+        return TypedResults.BadRequest("Invalid id");
+    }
+}
+
+static async Task<IResult> GetSimulationResults(Guid id, ISimulationRepository<Guid, int> simulationRepository)
+{
+    try
+    {
+        int simulationResult = await simulationRepository.GetResults(id);
+        return TypedResults.Ok(simulationResult);
+    }
+    catch (ArgumentNullException ane)
+    {
+        return TypedResults.BadRequest("Invalid id");
+    }
+    catch (KeyNotFoundException knfe)
+    {
+        return TypedResults.BadRequest("Invalid id");
+    }
+    catch (NotSupportedException nse)
+    {
+        return TypedResults.UnprocessableEntity("Simulation still in progress");
+    }
+}
 
 app.Run();
