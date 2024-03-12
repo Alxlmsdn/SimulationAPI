@@ -6,9 +6,13 @@ namespace SimulationAPI.Repository;
 
 public class SimulationRepository(SimulationFactory simulationFactory) : ISimulationRepository<Guid, int>
 {
-  ConcurrentDictionary<Guid, Task<int>> simulationTasks = new ConcurrentDictionary<Guid, Task<int>>();
-  ConcurrentDictionary<Guid, int> simulationTaskProgress = new ConcurrentDictionary<Guid, int>();
+  readonly ConcurrentDictionary<Guid, Task<int>> simulationTasks = new ConcurrentDictionary<Guid, Task<int>>();
+  readonly ConcurrentDictionary<Guid, int> simulationTaskProgress = new ConcurrentDictionary<Guid, int>();
 
+  private void ValidateGuidArgument(Guid id)
+  {
+    if (Guid.Empty == id) throw new ArgumentNullException();
+  }
   private void UpdateTaskProgress((Guid, int) TaskAndProgress)
   {
     (Guid id, int progressUpdate) = TaskAndProgress;
@@ -22,17 +26,9 @@ public class SimulationRepository(SimulationFactory simulationFactory) : ISimula
     }
   }
 
-  public int CheckProgress(Guid simulationId)
-  {
-    if (!simulationTaskProgress.TryGetValue(simulationId, out var simulationProgress))
-    {
-      throw new KeyNotFoundException();
-    }
-    return simulationProgress;
-  }
-
   public void CreateAndRun(Guid id)
   {
+    ValidateGuidArgument(id);
     if (simulationTasks.ContainsKey(id))
     {
       throw new ArgumentException();
@@ -47,11 +43,22 @@ public class SimulationRepository(SimulationFactory simulationFactory) : ISimula
     }
   }
 
-
-  public async Task<int> GetResults(Guid simulationId)
+  public int CheckProgress(Guid id)
   {
-    if (!simulationTasks.TryGetValue(simulationId, out var simulationTask) ||
-        !simulationTaskProgress.TryGetValue(simulationId, out int progress))
+    ValidateGuidArgument(id);
+    if (!simulationTaskProgress.TryGetValue(id, out var simulationProgress))
+    {
+      throw new KeyNotFoundException();
+    }
+    return simulationProgress;
+  }
+
+
+  public async Task<int> GetResults(Guid id)
+  {
+    ValidateGuidArgument(id);
+    if (!simulationTasks.TryGetValue(id, out var simulationTask) ||
+        !simulationTaskProgress.TryGetValue(id, out int progress))
     {
       throw new KeyNotFoundException();
     }
