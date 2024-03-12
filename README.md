@@ -52,6 +52,16 @@ The broker interface exposes 2 methods, the ability to add a message to the brok
 Adding a message to the broker from the API endpoint and
 invoking the Simulation Repository method to create and run a simulation when a message is received is configured in the Simulation Service - loosely coupling the repository to the message broker.
 
+## Testing
+
+Within the `SimulationsAPITests` directory there are 2 test class that have been created using MSTest for unit testing framework & Moq for stub & mock generation.
+
+The more extensive test coverage is found in the `SimulationRepositoryTests` class, these unit tests cover the basic edge cases of the simulation repository functionality.
+
+If more time was spent making these tests more robust, better async validation would be used to verify the assertions. Currently there is the possibility for the tests to fail due to lack of synchronization between the actions and assertions. Likewise within the `MessageBrokerTest` class.
+
+Additional refactoring would also be undertaken to consolidate the mock & stub generation within the test classes as currently there is more duplication then I would personally like to see within a test class.
+
 ## Hurdles
 
 ## Enhancements
